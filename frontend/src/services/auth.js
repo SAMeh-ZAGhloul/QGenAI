@@ -5,72 +5,60 @@ export const login = (email, password) => {
   return new Promise((resolve, reject) => {
     console.log('Attempting login with email:', email)
 
-    // Create XMLHttpRequest for more direct control
-    const xhr = new XMLHttpRequest()
-    xhr.open('POST', '/api/v1/auth/login', true)
-    xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded')
-
-    // Set up response handler
-    xhr.onreadystatechange = function() {
-      if (xhr.readyState === 4) {
-        if (xhr.status === 200) {
-          try {
-            const data = JSON.parse(xhr.responseText)
-            console.log('Login successful, received data:', data)
-
-            if (data && data.access_token) {
-              console.log('Storing token in localStorage')
-              // Directly set the token in localStorage
-              window.localStorage.setItem('token', data.access_token)
-
-              // Verify token was stored
-              const storedToken = window.localStorage.getItem('token')
-              console.log('Verification - Token in localStorage:', storedToken ? 'Token exists' : 'No token')
-
-              if (!storedToken) {
-                console.error('Failed to store token in localStorage')
-                reject(new Error('Failed to store authentication token'))
-                return
-              }
-
-              // Dispatch auth change event
-              window.dispatchEvent(new Event('auth-change'))
-
-              resolve(data)
-            } else {
-              console.error('No access_token in response data')
-              reject(new Error('Authentication failed: No access token received'))
-            }
-          } catch (e) {
-            console.error('Error parsing login response:', e)
-            reject(new Error('Failed to parse login response'))
-          }
-        } else {
-          console.error('Login failed with status:', xhr.status)
-          try {
-            const errorData = JSON.parse(xhr.responseText)
-            console.error('Error response:', errorData)
-            reject(new Error(errorData.detail || 'Login failed'))
-          } catch (e) {
-            reject(new Error(`Login failed with status ${xhr.status}`))
-          }
-        }
-      }
-    }
-
-    // Handle network errors
-    xhr.onerror = function() {
-      console.error('Network error during login request')
-      reject(new Error('Network error during login request'))
-    }
-
-    // Prepare and send the request
+    // Use fetch instead of XMLHttpRequest
     const formData = new URLSearchParams()
     formData.append('username', email)
     formData.append('password', password)
 
     console.log('Login request payload:', formData.toString())
-    xhr.send(formData.toString())
+
+    fetch('/api/v1/auth/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: formData.toString(),
+    })
+      .then(response => {
+        if (!response.ok) {
+          return response.json().then(errorData => {
+            console.error('Login failed with status:', response.status)
+            console.error('Error response:', errorData)
+            throw new Error(errorData.detail || 'Login failed')
+          })
+        }
+        return response.json()
+      })
+      .then(data => {
+        console.log('Login successful, received data:', data)
+
+        if (data && data.access_token) {
+          console.log('Storing token in localStorage')
+          // Directly set the token in localStorage
+          window.localStorage.setItem('token', data.access_token)
+
+          // Verify token was stored
+          const storedToken = window.localStorage.getItem('token')
+          console.log('Verification - Token in localStorage:', storedToken ? 'Token exists' : 'No token')
+
+          if (!storedToken) {
+            console.error('Failed to store token in localStorage')
+            throw new Error('Failed to store authentication token')
+          }
+
+          // Dispatch auth change event
+          window.dispatchEvent(new Event('auth-change'))
+
+          resolve(data)
+        } else {
+          console.error('No access_token in response data')
+          throw new Error('Authentication failed: No access token received')
+        }
+      })
+      .catch(error => {
+        console.error('Login error:', error)
+        reject(error)
+      })
   })
 }
 

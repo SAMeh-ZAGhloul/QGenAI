@@ -1,7 +1,10 @@
 from typing import List, Dict, Any, Tuple
+import requests
 from langchain_openai import ChatOpenAI
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.prompts import ChatPromptTemplate
 from langchain.schema import StrOutputParser
+from langchain.chat_models.base import BaseChatModel
 
 from app.core.config import settings
 from app.rag.vector_store import query_vector_store
@@ -11,18 +14,18 @@ from sqlalchemy.orm import Session
 def process_query(query_text: str, user_id: int, db: Session) -> Dict[str, Any]:
     """
     Process a user query using RAG.
-    
+
     This is the core RAG implementation with mandatory source citation.
     """
     # Retrieve relevant chunks from vector store
     relevant_chunks = query_vector_store(query_text, n_results=5)
-    
+
     if not relevant_chunks:
         return {
             "answer": "I couldn't find any relevant information in your documents to answer this query.",
             "sources": []
         }
-    
+
     # Format chunks for the prompt
     formatted_chunks = []
     for chunk in relevant_chunks:
@@ -30,14 +33,14 @@ def process_query(query_text: str, user_id: int, db: Session) -> Dict[str, Any]:
         page_info = f"Page {chunk['metadata']['page_number']}" if chunk["metadata"]["page_number"] else ""
         section_info = f"Section: {chunk['metadata']['section']}" if chunk["metadata"]["section"] else ""
         location = f"{page_info} {section_info}".strip()
-        
+
         formatted_chunk = f"Document: {doc_name}\n"
         if location:
             formatted_chunk += f"Location: {location}\n"
         formatted_chunk += f"Content: {chunk['text']}\n\n"
-        
+
         formatted_chunks.append(formatted_chunk)
-    
+
     # Create the prompt
     system_prompt = """You are a helpful assistant that answers questions based ONLY on the provided document chunks.
 Your task is to provide accurate answers with citations for every piece of information.
@@ -71,23 +74,56 @@ Remember to ONLY use information from these chunks and include citations for eve
         ("system", system_prompt),
         ("human", human_prompt)
     ])
-    
-    # Initialize the LLM
-    llm = ChatOpenAI(
-        model=settings.LLM_MODEL,
-        temperature=0,
-        openai_api_key=settings.OPENAI_API_KEY
-    )
-    
+
+    # Initialize the LLM based on provider
+    if settings.LLM_PROVIDER == "openai":
+        llm = ChatOpenAI(
+            model=settings.LLM_MODEL,
+            temperature=0,
+            openai_api_key=settings.OPENAI_API_KEY
+        )
+    elif settings.LLM_PROVIDER == "google":
+        llm = ChatGoogleGenerativeAI(
+            model=settings.GOOGLE_MODEL,
+            temperature=0,
+            google_api_key=settings.GOOGLE_API_KEY
+        )
+    elif settings.LLM_PROVIDER == "ollama":
+        # Create a custom Ollama LLM class
+        class OllamaLLM(BaseChatModel):
+            def _generate(self, messages, stop=None, run_manager=None, **kwargs):
+                prompt = "\n".join([f"{m.type}: {m.content}" for m in messages])
+                response = requests.post(
+                    f"{settings.OLLAMA_URL}/api/generate",
+                    json={
+                        "model": settings.OLLAMA_MODEL,
+                        "prompt": prompt,
+                        "temperature": 0,
+                    }
+                )
+                if response.status_code != 200:
+                    raise Exception(f"Ollama API error: {response.text}")
+
+                return response.json()["response"]
+
+        llm = OllamaLLM()
+    else:
+        # Default to OpenAI if provider is not recognized
+        llm = ChatOpenAI(
+            model=settings.LLM_MODEL,
+            temperature=0,
+            openai_api_key=settings.OPENAI_API_KEY
+        )
+
     # Create the chain
     chain = prompt | llm | StrOutputParser()
-    
+
     # Run the chain
     answer = chain.invoke({
         "context": "\n".join(formatted_chunks),
         "question": query_text
     })
-    
+
     # Save the query and response to the database
     db_query = Query(
         query_text=query_text,
@@ -96,14 +132,14 @@ Remember to ONLY use information from these chunks and include citations for eve
     )
     db.add(db_query)
     db.flush()  # Get the query ID
-    
+
     # Save the sources
     sources_data = []
     for chunk in relevant_chunks:
         # Get the document
         document_id = chunk["metadata"]["document_id"]
         document = db.query(Document).filter(Document.id == document_id).first()
-        
+
         if document:
             # Create a query source
             query_source = QuerySource(
@@ -112,7 +148,7 @@ Remember to ONLY use information from these chunks and include citations for eve
                 query_id=db_query.id
             )
             db.add(query_source)
-            
+
             # Add to sources data for response
             sources_data.append({
                 "document_name": document.filename,
@@ -121,9 +157,9 @@ Remember to ONLY use information from these chunks and include citations for eve
                 "section": chunk["metadata"]["section"],
                 "content": chunk["text"][:200] + "..." if len(chunk["text"]) > 200 else chunk["text"]
             })
-    
+
     db.commit()
-    
+
     return {
         "answer": answer,
         "sources": sources_data

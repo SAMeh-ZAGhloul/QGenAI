@@ -14,22 +14,35 @@ from app.rag.vector_store import add_chunks_to_vector_store
 def process_document(document: Document, db) -> bool:
     """Process a document by extracting text, splitting into chunks, and storing in vector DB."""
     try:
+        # Update status to processing
+        document.processing_status = "processing"
+        document.processing_progress = 5
+        db.commit()
+
         # Extract text from document
         text = extract_text(document.file_path, document.content_type)
-        
+
+        # Update progress
+        document.processing_progress = 30
+        db.commit()
+
         # Split text into chunks
         chunks = split_text(text)
-        
+
+        # Update progress
+        document.processing_progress = 50
+        db.commit()
+
         # Create document chunks in database
         db_chunks = []
         for i, chunk in enumerate(chunks):
             # Determine page number or section if possible
             page_number = chunk.get("page_number")
             section = chunk.get("section", "")
-            
+
             # Create a unique chunk ID
             chunk_id = f"{document.id}-chunk-{i}"
-            
+
             # Create database record
             db_chunk = DocumentChunk(
                 chunk_id=chunk_id,
@@ -40,7 +53,13 @@ def process_document(document: Document, db) -> bool:
             )
             db.add(db_chunk)
             db_chunks.append(db_chunk)
-        
+
+            # Update progress periodically (every 10 chunks or at the end)
+            if i % 10 == 0 or i == len(chunks) - 1:
+                progress = 50 + int((i / len(chunks)) * 25)  # 50-75% progress during chunking
+                document.processing_progress = min(progress, 75)
+                db.commit()
+
         # Generate embeddings and store in vector DB
         chunk_texts = [chunk.content for chunk in db_chunks]
         chunk_ids = [chunk.chunk_id for chunk in db_chunks]
@@ -54,17 +73,25 @@ def process_document(document: Document, db) -> bool:
             }
             for chunk in db_chunks
         ]
-        
+
+        # Update progress
+        document.processing_progress = 80
+        db.commit()
+
         # Add chunks to vector store
         add_chunks_to_vector_store(chunk_texts, chunk_ids, chunk_metadata)
-        
+
         # Mark document as processed
         document.processed = True
+        document.processing_progress = 100
+        document.processing_status = "completed"
         db.commit()
-        
+
         return True
     except Exception as e:
         print(f"Error processing document: {e}")
+        # Update status to error
+        document.processing_status = "error"
         db.rollback()
         return False
 
@@ -100,16 +127,16 @@ def split_text(text: str) -> List[Dict[str, Any]]:
         chunk_overlap=200,
         length_function=len,
     )
-    
+
     # Split the text
     chunks = []
-    
+
     # Check if text has page markers
     if "[Page " in text:
         # Split by page
         pages = text.split("[Page ")
         current_page = 1
-        
+
         for page in pages[1:]:  # Skip the first empty split
             # Extract page number
             page_parts = page.split("]", 1)
@@ -117,10 +144,10 @@ def split_text(text: str) -> List[Dict[str, Any]]:
                 try:
                     page_number = int(page_parts[0])
                     page_content = page_parts[1]
-                    
+
                     # Split the page content
                     page_chunks = text_splitter.create_documents([page_content])
-                    
+
                     # Add chunks with page metadata
                     for chunk in page_chunks:
                         chunks.append({
@@ -132,24 +159,24 @@ def split_text(text: str) -> List[Dict[str, Any]]:
                     # If page number parsing fails, just use the current page counter
                     page_content = page
                     page_chunks = text_splitter.create_documents([page_content])
-                    
+
                     for chunk in page_chunks:
                         chunks.append({
                             "text": chunk.page_content,
                             "page_number": current_page,
                             "section": ""
                         })
-                    
+
                     current_page += 1
     else:
         # No page markers, just split the text
         raw_chunks = text_splitter.create_documents([text])
-        
+
         for chunk in raw_chunks:
             chunks.append({
                 "text": chunk.page_content,
                 "page_number": None,
                 "section": ""
             })
-    
+
     return chunks

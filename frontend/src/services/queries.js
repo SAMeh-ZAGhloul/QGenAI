@@ -4,12 +4,12 @@ export const submitQuery = async (queryText) => {
   const response = await api.post('/queries', {
     query_text: queryText,
   })
-  
+
   return response.data
 }
 
 export const getQueries = async () => {
-  const response = await api.get('/queries')
+  const response = await api.get('/queries/')
   return response.data
 }
 

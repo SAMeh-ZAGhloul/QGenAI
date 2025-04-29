@@ -95,6 +95,34 @@ def get_document(
 
     return document
 
+@router.get("/{document_id}/status", response_model=dict)
+def get_document_status(
+    document_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+) -> Any:
+    """
+    Get the processing status of a document.
+    """
+    document = db.query(Document).filter(
+        Document.id == document_id,
+        Document.owner_id == current_user.id
+    ).first()
+
+    if not document:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document not found"
+        )
+
+    return {
+        "id": document.id,
+        "filename": document.filename,
+        "processed": document.processed,
+        "processing_progress": document.processing_progress,
+        "processing_status": document.processing_status
+    }
+
 @router.delete("/{document_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_document(
     document_id: int,

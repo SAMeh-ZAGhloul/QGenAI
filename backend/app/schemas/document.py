@@ -32,13 +32,15 @@ class Document(DocumentBase):
     file_path: str
     created_at: datetime
     processed: bool
+    processing_progress: int = 0
+    processing_status: str = "pending"
     owner_id: int
-    
+
     class Config:
         from_attributes = True
 
 class DocumentWithChunks(Document):
     chunks: List[DocumentChunk] = []
-    
+
     class Config:
         from_attributes = True
