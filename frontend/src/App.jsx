@@ -33,11 +33,21 @@ function App() {
     // Check if user is authenticated on initial load
     checkAuthStatus()
 
-    // Set up event listener for storage changes (in case token is modified in another tab)
-    window.addEventListener('storage', checkAuthStatus)
+    // Set up event listeners for auth changes
+    const handleAuthChange = () => {
+      console.log('Auth change event detected')
+      checkAuthStatus()
+    }
+
+    // Listen for storage events (for changes in other tabs)
+    window.addEventListener('storage', handleAuthChange)
+
+    // Listen for our custom auth-change event
+    window.addEventListener('auth-change', handleAuthChange)
 
     return () => {
-      window.removeEventListener('storage', checkAuthStatus)
+      window.removeEventListener('storage', handleAuthChange)
+      window.removeEventListener('auth-change', handleAuthChange)
     }
   }, [])
 

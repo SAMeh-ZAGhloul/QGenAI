@@ -15,28 +15,29 @@ const Login = ({ setIsAuthenticated }) => {
     console.log('Login attempt with email:', email)
 
     try {
+      // Call the login function which now handles token storage
       const data = await login(email, password)
-      console.log('Login successful, received data:', data)
 
-      if (data && data.access_token) {
-        console.log('Token received, storing in localStorage')
-        localStorage.setItem('token', data.access_token)
+      // Double-check that the token was stored
+      const storedToken = localStorage.getItem('token')
+      console.log('Token in localStorage after login:', storedToken ? 'Token exists' : 'No token')
 
+      if (storedToken) {
         // Force authentication state update
         setIsAuthenticated(true)
 
-        // Add a small delay before navigation to ensure state is updated
-        setTimeout(() => {
-          console.log('Navigating to dashboard')
-          navigate('/dashboard')
-        }, 100)
+        // Create a custom event to notify the app about authentication change
+        window.dispatchEvent(new Event('auth-change'))
+
+        console.log('Authentication state updated, navigating to dashboard')
+        navigate('/dashboard')
       } else {
-        console.error('No access token in response')
-        setError('Authentication failed: No access token received')
+        console.error('Token was not stored in localStorage')
+        setError('Authentication failed: Token storage issue')
       }
     } catch (error) {
       console.error('Login error in component:', error)
-      setError(error.response?.data?.detail || 'Invalid email or password')
+      setError(error.message || 'Invalid email or password')
     } finally {
       setIsLoading(false)
     }
