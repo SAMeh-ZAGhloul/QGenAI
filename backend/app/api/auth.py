@@ -25,7 +25,7 @@ def register_user(user_in: UserCreate, db: Session = Depends(get_db)) -> Any:
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Email already registered"
         )
-    
+
     # Create new user
     db_user = User(
         email=user_in.email,
@@ -35,7 +35,7 @@ def register_user(user_in: UserCreate, db: Session = Depends(get_db)) -> Any:
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
-    
+
     return db_user
 
 @router.post("/login", response_model=Token)
@@ -46,28 +46,43 @@ def login(
     """
     OAuth2 compatible token login, get an access token for future requests.
     """
+    print(f"Login attempt with username: {form_data.username}")
+
     # Find user by email
     user = db.query(User).filter(User.email == form_data.username).first()
-    if not user or not verify_password(form_data.password, user.hashed_password):
+
+    if not user:
+        print(f"User not found with email: {form_data.username}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
+    if not verify_password(form_data.password, user.hashed_password):
+        print(f"Invalid password for user: {form_data.username}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
     # Check if user is active
     if not user.is_active:
+        print(f"User is inactive: {form_data.username}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Inactive user"
         )
-    
+
     # Create access token
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
         subject=user.id, expires_delta=access_token_expires
     )
-    
+
+    print(f"Login successful for user: {form_data.username}")
+
     return {
         "access_token": access_token,
         "token_type": "bearer"

@@ -11,64 +11,102 @@ import Layout from './components/Layout/Layout'
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
-  
-  useEffect(() => {
-    // Check if user is authenticated
+  const [isLoading, setIsLoading] = useState(true)
+
+  // Function to check authentication status
+  const checkAuthStatus = () => {
     const token = localStorage.getItem('token')
+    console.log('Checking auth status - Token in localStorage:', token ? 'Token exists' : 'No token')
+
     if (token) {
+      console.log('Setting isAuthenticated to true')
       setIsAuthenticated(true)
+    } else {
+      console.log('No token found, user is not authenticated')
+      setIsAuthenticated(false)
+    }
+
+    setIsLoading(false)
+  }
+
+  useEffect(() => {
+    // Check if user is authenticated on initial load
+    checkAuthStatus()
+
+    // Set up event listener for storage changes (in case token is modified in another tab)
+    window.addEventListener('storage', checkAuthStatus)
+
+    return () => {
+      window.removeEventListener('storage', checkAuthStatus)
     }
   }, [])
-  
+
   // Protected route component
   const ProtectedRoute = ({ children }) => {
+    console.log('ProtectedRoute - isAuthenticated:', isAuthenticated, 'isLoading:', isLoading)
+
+    // Show loading indicator while checking authentication
+    if (isLoading) {
+      return (
+        <div className="flex items-center justify-center h-screen">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-500 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Loading...</p>
+          </div>
+        </div>
+      )
+    }
+
+    // Redirect to login if not authenticated
     if (!isAuthenticated) {
+      console.log('User not authenticated, redirecting to login')
       return <Navigate to="/login" />
     }
-    
+
+    console.log('User authenticated, rendering protected content')
     return children
   }
-  
+
   return (
     <Routes>
       <Route path="/" element={<Landing />} />
-      <Route 
-        path="/login" 
-        element={<Login setIsAuthenticated={setIsAuthenticated} />} 
+      <Route
+        path="/login"
+        element={<Login setIsAuthenticated={setIsAuthenticated} />}
       />
       <Route path="/register" element={<Register />} />
-      
-      <Route 
-        path="/dashboard" 
+
+      <Route
+        path="/dashboard"
         element={
           <ProtectedRoute>
             <Layout>
               <Dashboard />
             </Layout>
           </ProtectedRoute>
-        } 
+        }
       />
-      
-      <Route 
-        path="/upload" 
+
+      <Route
+        path="/upload"
         element={
           <ProtectedRoute>
             <Layout>
               <DocumentUpload />
             </Layout>
           </ProtectedRoute>
-        } 
+        }
       />
-      
-      <Route 
-        path="/query" 
+
+      <Route
+        path="/query"
         element={
           <ProtectedRoute>
             <Layout>
               <QueryInterface />
             </Layout>
           </ProtectedRoute>
-        } 
+        }
       />
     </Routes>
   )
