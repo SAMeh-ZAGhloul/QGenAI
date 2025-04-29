@@ -33,6 +33,6 @@ class Settings(BaseSettings):
     OLLAMA_URL: str = os.getenv("OLLAMA_URL", "http://localhost:11434")
 
     # CORS
-    BACKEND_CORS_ORIGINS: list = ["http://localhost:5173", "http://localhost:3000"]
+    BACKEND_CORS_ORIGINS: list = ["http://localhost:5173", "http://localhost:3000", "http://localhost:5174", "http://localhost:5175"]
 
 settings = Settings()

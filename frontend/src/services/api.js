@@ -15,26 +15,58 @@ api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token')
     console.log('Request interceptor - Token in localStorage:', token ? 'Token exists' : 'No token')
+
     if (token) {
-      config.headers.Authorization = `Bearer ${token}`
-      console.log('Added Authorization header:', `Bearer ${token.substring(0, 10)}...`)
+      // Make sure token is properly formatted
+      const formattedToken = token.trim()
+      config.headers.Authorization = `Bearer ${formattedToken}`
+      console.log('Added Authorization header:', `Bearer ${formattedToken.substring(0, 10)}...`)
+
+      // Log the full headers for debugging
+      console.log('Request headers:', JSON.stringify(config.headers))
+    } else {
+      console.warn('No token found in localStorage, request will be unauthorized')
     }
+
     console.log('Request URL:', config.url)
     console.log('Request method:', config.method)
     return config
   },
-  (error) => Promise.reject(error)
+  (error) => {
+    console.error('Request interceptor error:', error)
+    return Promise.reject(error)
+  }
 )
 
 // Add response interceptor to handle errors
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    console.log('Response successful:', response.status, response.config.url)
+    return response
+  },
   (error) => {
-    // Handle 401 Unauthorized errors
-    if (error.response && error.response.status === 401) {
-      localStorage.removeItem('token')
-      window.location.href = '/login'
+    console.error('API Error:', error.message)
+
+    if (error.response) {
+      console.error('Response status:', error.response.status)
+      console.error('Response data:', error.response.data)
+
+      // Handle 401 Unauthorized errors
+      if (error.response.status === 401) {
+        console.warn('Unauthorized access detected, clearing token and redirecting to login')
+        localStorage.removeItem('token')
+
+        // Dispatch auth change event
+        window.dispatchEvent(new Event('auth-change'))
+
+        // Redirect to login page
+        window.location.href = '/login'
+      }
+    } else if (error.request) {
+      // The request was made but no response was received
+      console.error('No response received:', error.request)
     }
+
     return Promise.reject(error)
   }
 )

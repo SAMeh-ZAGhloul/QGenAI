@@ -77,10 +77,19 @@ def login(
 
     # Create access token
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+
+    # Verify the secret key is not empty
+    if not settings.SECRET_KEY or settings.SECRET_KEY == "your-secret-key-for-jwt":
+        print("WARNING: Using default or empty SECRET_KEY. This is insecure!")
+
+    # Create the token
     access_token = create_access_token(
         subject=user.id, expires_delta=access_token_expires
     )
 
+    # Log token details (first 10 chars only for security)
+    print(f"Generated token (first 10 chars): {access_token[:10]}...")
+    print(f"Token expiration: {access_token_expires.total_seconds()/60} minutes")
     print(f"Login successful for user: {form_data.username}")
 
     return {

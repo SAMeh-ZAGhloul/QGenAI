@@ -34,22 +34,49 @@ export const login = (email, password) => {
 
         if (data && data.access_token) {
           console.log('Storing token in localStorage')
-          // Directly set the token in localStorage
-          window.localStorage.setItem('token', data.access_token)
 
-          // Verify token was stored
-          const storedToken = window.localStorage.getItem('token')
-          console.log('Verification - Token in localStorage:', storedToken ? 'Token exists' : 'No token')
+          try {
+            // Clear any existing token first
+            window.localStorage.removeItem('token')
 
-          if (!storedToken) {
-            console.error('Failed to store token in localStorage')
-            throw new Error('Failed to store authentication token')
+            // Store the new token
+            window.localStorage.setItem('token', data.access_token)
+
+            // Verify token was stored
+            const storedToken = window.localStorage.getItem('token')
+            console.log('Verification - Token in localStorage:', storedToken ? 'Token exists' : 'No token')
+            console.log('Token value (first 10 chars):', storedToken ? storedToken.substring(0, 10) + '...' : 'None')
+
+            if (!storedToken) {
+              console.error('Failed to store token in localStorage')
+              throw new Error('Failed to store authentication token')
+            }
+
+            // Test a simple API call to verify the token works
+            console.log('Testing token with a simple API call')
+            fetch('/api/v1/queries', {
+              headers: {
+                'Authorization': `Bearer ${storedToken}`
+              }
+            })
+              .then(response => {
+                console.log('Token test response status:', response.status)
+                if (!response.ok) {
+                  console.warn('Token test failed with status:', response.status)
+                }
+              })
+              .catch(err => {
+                console.warn('Token test request failed:', err)
+              })
+
+            // Dispatch auth change event
+            window.dispatchEvent(new Event('auth-change'))
+
+            resolve(data)
+          } catch (storageError) {
+            console.error('Error storing token:', storageError)
+            throw new Error('Failed to store authentication token: ' + storageError.message)
           }
-
-          // Dispatch auth change event
-          window.dispatchEvent(new Event('auth-change'))
-
-          resolve(data)
         } else {
           console.error('No access_token in response data')
           throw new Error('Authentication failed: No access token received')
