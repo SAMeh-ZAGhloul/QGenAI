@@ -15,7 +15,7 @@ function App() {
 
   // Function to check authentication status
   const checkAuthStatus = () => {
-    const token = localStorage.getItem('token')
+    const token = window.localStorage.getItem('token')
     console.log('Checking auth status - Token in localStorage:', token ? 'Token exists' : 'No token')
 
     if (token) {
