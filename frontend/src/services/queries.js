@@ -1,7 +1,7 @@
 import api from './api'
 
 export const submitQuery = async (queryText) => {
-  const response = await api.post('/queries', {
+  const response = await api.post('/queries/', {
     query_text: queryText,
   })
 
@@ -14,6 +14,6 @@ export const getQueries = async () => {
 }
 
 export const getQuery = async (id) => {
-  const response = await api.get(`/queries/${id}`)
+  const response = await api.get(`/queries/${id}/`)
   return response.data
 }

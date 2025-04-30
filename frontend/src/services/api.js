@@ -22,11 +22,11 @@ api.interceptors.request.use(
         const formattedToken = String(token).trim()
 
         // Set the Authorization header
-        config.headers.Authorization = `Bearer ${formattedToken}`
+        config.headers['Authorization'] = `Bearer ${formattedToken}`
         console.log('Added Authorization header:', `Bearer ${formattedToken.substring(0, 10)}...`)
 
         // Ensure Content-Type is set (unless it's multipart/form-data)
-        if (!config.headers['Content-Type'] && !config.headers.get('Content-Type')) {
+        if (!config.headers['Content-Type'] && !config.headers.get) {
           config.headers['Content-Type'] = 'application/json'
         }
 

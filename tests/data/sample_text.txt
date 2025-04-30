@@ -1,0 +1,39 @@
+QGenAI Test Document
+
+This is a sample document for testing the QGenAI application.
+
+Section 1: Introduction
+QGenAI is a document-based question answering system using Retrieval Augmented Generation (RAG).
+It allows users to upload documents and ask questions about them.
+The system uses a vector database to store document embeddings and retrieves relevant chunks when a query is made.
+
+Section 2: Features
+- Document upload and processing
+- Document chunking and embedding
+- Vector-based retrieval
+- Question answering with source citations
+- User authentication and query history
+
+Section 3: Technical Details
+The backend is built with FastAPI and follows a modular architecture:
+- API Layer: Handles HTTP requests and responses
+- Core: Contains configuration and security utilities
+- Database: Models and session management
+- RAG: Implements the Retrieval Augmented Generation pipeline
+- Schemas: Pydantic models for data validation
+
+Section 4: LLM Configuration
+The backend supports multiple LLM providers:
+- OpenAI (GPT models)
+- Google Gemini
+- Ollama (local models)
+
+Section 5: Test Questions
+Here are some sample questions you can ask about this document:
+1. What is QGenAI?
+2. What features does QGenAI offer?
+3. What LLM providers are supported?
+4. How is the backend structured?
+5. What is RAG?
+
+End of document.

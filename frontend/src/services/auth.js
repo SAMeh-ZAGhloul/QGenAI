@@ -56,13 +56,12 @@ export const login = (email, password) => {
 
             // Test a simple API call to verify the token works
             console.log('Testing token with a simple API call')
-            fetch('/api/v1/queries', {
+            fetch('/api/v1/queries/', {
               method: 'GET',
               headers: {
                 'Authorization': `Bearer ${storedToken}`,
                 'Content-Type': 'application/json'
-              },
-              credentials: 'same-origin' // Include cookies if any
+              }
             })
               .then(response => {
                 console.log('Token test response status:', response.status)
