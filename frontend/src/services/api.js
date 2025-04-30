@@ -17,13 +17,24 @@ api.interceptors.request.use(
     console.log('Request interceptor - Token in localStorage:', token ? 'Token exists' : 'No token')
 
     if (token) {
-      // Make sure token is properly formatted
-      const formattedToken = token.trim()
-      config.headers.Authorization = `Bearer ${formattedToken}`
-      console.log('Added Authorization header:', `Bearer ${formattedToken.substring(0, 10)}...`)
+      try {
+        // Make sure token is properly formatted
+        const formattedToken = String(token).trim()
 
-      // Log the full headers for debugging
-      console.log('Request headers:', JSON.stringify(config.headers))
+        // Set the Authorization header
+        config.headers.Authorization = `Bearer ${formattedToken}`
+        console.log('Added Authorization header:', `Bearer ${formattedToken.substring(0, 10)}...`)
+
+        // Ensure Content-Type is set (unless it's multipart/form-data)
+        if (!config.headers['Content-Type'] && !config.headers.get('Content-Type')) {
+          config.headers['Content-Type'] = 'application/json'
+        }
+
+        // Log the full headers for debugging
+        console.log('Request headers:', JSON.stringify(config.headers))
+      } catch (e) {
+        console.error('Error setting auth header:', e)
+      }
     } else {
       console.warn('No token found in localStorage, request will be unauthorized')
     }

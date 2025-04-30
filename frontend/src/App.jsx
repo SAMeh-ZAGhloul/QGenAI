@@ -15,15 +15,25 @@ function App() {
 
   // Function to check authentication status
   const checkAuthStatus = () => {
-    const token = window.localStorage.getItem('token')
+    const token = localStorage.getItem('token')
     console.log('Checking auth status - Token in localStorage:', token ? 'Token exists' : 'No token')
 
-    if (token) {
+    if (token && token.trim() !== '') {
       console.log('Setting isAuthenticated to true')
       setIsAuthenticated(true)
+
+      // Verify token format
+      try {
+        const tokenValue = token.trim()
+        console.log('Token value (first 10 chars):', tokenValue.substring(0, 10) + '...')
+      } catch (e) {
+        console.error('Error processing token:', e)
+      }
     } else {
-      console.log('No token found, user is not authenticated')
+      console.log('No token found or empty token, user is not authenticated')
       setIsAuthenticated(false)
+      // Clear any potentially invalid token
+      localStorage.removeItem('token')
     }
 
     setIsLoading(false)

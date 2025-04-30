@@ -18,6 +18,7 @@ export const login = (email, password) => {
         'Content-Type': 'application/x-www-form-urlencoded',
       },
       body: formData.toString(),
+      credentials: 'same-origin', // Include cookies if any
     })
       .then(response => {
         if (!response.ok) {
@@ -37,13 +38,14 @@ export const login = (email, password) => {
 
           try {
             // Clear any existing token first
-            window.localStorage.removeItem('token')
+            localStorage.removeItem('token')
 
-            // Store the new token
-            window.localStorage.setItem('token', data.access_token)
+            // Store the new token - ensure it's a string and trimmed
+            const tokenValue = String(data.access_token).trim()
+            localStorage.setItem('token', tokenValue)
 
             // Verify token was stored
-            const storedToken = window.localStorage.getItem('token')
+            const storedToken = localStorage.getItem('token')
             console.log('Verification - Token in localStorage:', storedToken ? 'Token exists' : 'No token')
             console.log('Token value (first 10 chars):', storedToken ? storedToken.substring(0, 10) + '...' : 'None')
 
@@ -55,14 +57,19 @@ export const login = (email, password) => {
             // Test a simple API call to verify the token works
             console.log('Testing token with a simple API call')
             fetch('/api/v1/queries', {
+              method: 'GET',
               headers: {
-                'Authorization': `Bearer ${storedToken}`
-              }
+                'Authorization': `Bearer ${storedToken}`,
+                'Content-Type': 'application/json'
+              },
+              credentials: 'same-origin' // Include cookies if any
             })
               .then(response => {
                 console.log('Token test response status:', response.status)
                 if (!response.ok) {
                   console.warn('Token test failed with status:', response.status)
+                } else {
+                  console.log('Token test successful!')
                 }
               })
               .catch(err => {
