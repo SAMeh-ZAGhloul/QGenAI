@@ -14,13 +14,28 @@ check_dependency() {
 }
 
 check_dependency python3
-check_dependency pip3
+check_dependency uv
 check_dependency npm
+
+# Create virtual environment if it doesn't exist
+if [ ! -d "backend/venv" ]; then
+  echo "Creating virtual environment..."
+  python3 -m venv backend/venv
+fi
 
 # Start backend server
 echo "Starting backend server..."
 cd backend
-pip3 install -r requirements.txt
+
+# Activate virtual environment
+source venv/bin/activate
+
+# Install dependencies with uv
+echo "Installing backend dependencies with uv..."
+uv pip install -r requirements.txt
+
+# Start the backend server
+echo "Starting backend server..."
 python3 main.py &
 BACKEND_PID=$!
 
@@ -31,7 +46,13 @@ sleep 3
 # Start frontend dev server
 echo "Starting frontend server..."
 cd ../frontend
+
+# Install dependencies
+echo "Installing frontend dependencies..."
 npm install
+
+# Start the frontend server
+echo "Starting frontend development server..."
 npm run dev &
 FRONTEND_PID=$!
 
@@ -48,6 +69,7 @@ trap cleanup SIGINT SIGTERM
 echo "Application started successfully!"
 echo "Backend running at http://localhost:8000"
 echo "Frontend running at http://localhost:5173"
+echo "Press Ctrl+C to stop all servers"
 
 # Keep script running
 wait
