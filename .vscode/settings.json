@@ -1,0 +1,12 @@
+{
+  "git.enabled": true,
+  "git.autofetch": true,
+  "git.confirmSync": true,
+  "git.enableSmartCommit": true,
+  "git.suggestSmartCommit": true,
+  "git.openRepositoryInParentFolders": "always",
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll": true
+  }
+}
